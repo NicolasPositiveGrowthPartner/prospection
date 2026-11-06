@@ -3,10 +3,11 @@
  * Relais API Sirene INSEE - la clé API reste sur le serveur.
  * Placez ce fichier dans le même répertoire que prospection.html.
  *
- * ETAPE OBLIGATOIRE : remplacez la clé ci-dessous par votre clé INSEE
- * (portail-api.insee.fr > Mes applications > Souscriptions).
+ * ETAPE OBLIGATOIRE : définissez la variable d'environnement INSEE_API_KEY
+ * avec votre clé INSEE (portail-api.insee.fr > Mes applications > Souscriptions).
+ * Ne commitez JAMAIS la clé en dur dans ce fichier.
  */
-$API_KEY = '58d5ea3e-5be3-440b-95ea-3e5be3a40b34';
+$API_KEY = getenv("INSEE_API_KEY") ?: "";
 
 // --- Paramètres autorisés (liste blanche, pour éviter tout abus du relais) ---
 $q      = isset($_GET['q'])      ? $_GET['q']      : '';
@@ -16,6 +17,13 @@ $date   = (isset($_GET['date']) && $_GET['date'] === '2999-12-31') ? '2999-12-31
 
 if ($nombre < 1 || $nombre > 100) { $nombre = 20; }
 if ($page < 1) { $page = 1; }
+
+if ($API_KEY === '') {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['header' => ['statut' => 500, 'message' => 'Clé INSEE non configurée : définir la variable d’environnement INSEE_API_KEY sur le serveur.']]);
+    exit;
+}
 
 // Champs strictement limités : pour garder le relais sûr, on ne transmet pas
 // de paramètre champs libre ; l'API renvoie tous les champs standards de l'app.
