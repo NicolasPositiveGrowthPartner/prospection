@@ -324,7 +324,7 @@ function buildQuery(){
     if (cps.length) parts.push("codePostalEtablissement:("+cps.join(" OR ")+")");
   }
   var com = document.getElementById("f_commune").value.trim();
-  if (com) parts.push('libelleCommuneEtablissement:"'+com+'"');
+  if (com) parts.push('libelleCommuneEtablissement:"'+com.toUpperCase()+'"');
   var den = document.getElementById("f_denomination").value.trim();
   if (den) parts.push('denominationUniteLegale:"'+den+'"');
   var dmin = document.getElementById("f_dmin").value, dmax = document.getElementById("f_dmax").value;
@@ -539,8 +539,8 @@ function importCsv(){
     if (/siren/i.test(c[0]) && /siret/i.test(c[1] || "")) return; // ligne d'en-tête
     if (qList.some(function(q){ return q.siren === siren; })) return;
     qList.push({ siren: siren, siret: (c[1] || "").replace(/"/g, ""), denom: c[2] || "",
-                 enseigne: "", commune: c[7] || "", cp: (c[6] || "").replace(/"/g, ""),
-                 naf: c[3] || "", tranche: "" });
+                 enseigne: c[3] || "", commune: c[8] || "", cp: (c[7] || "").replace(/"/g, ""),
+                 naf: c[4] || "", tranche: "" });
     added++;
   });
   qSave();
@@ -571,7 +571,7 @@ function qDefault(siren){
   if (d.oppProsp === undefined) d.oppProsp = false;
   if (d.proximite === undefined){
     var dep = (currentIdentity(siren).cp || "").slice(0, 2);
-    d.proximite = ["69","38","42","01","26","43","63","03","07","15","43","73","74","05"].indexOf(dep) >= 0;
+    d.proximite = ["01","03","07","15","26","38","42","43","63","69","73","74"].indexOf(dep) >= 0;
   }
   return d;
 }
