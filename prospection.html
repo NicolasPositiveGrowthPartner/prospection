@@ -171,7 +171,7 @@
         <p style="margin-bottom:0"><strong>Éliminatoires :</strong> procédure collective, opposition à la prospection. <strong>Statuts :</strong> &ge; 70 Prioritaire / 40-69 À qualifier / &lt; 40 Veille.</p>
       </div>
       <div id="importBlock" style="display:none;margin-top:10px">
-        <textarea id="importTxt" rows="4" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:.85rem;box-sizing:border-box" placeholder="Colle ici le CSV exporté de l'étape 1 (premières colonnes SIREN;SIRET;Dénomination;...)"></textarea>
+        <textarea id="importTxt" rows="4" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:.85rem;box-sizing:border-box" placeholder="Colle ici le CSV exporté de l'étape 1 (SIREN;SIRET;Dénomination;...) OU un CSV de qualification (SIREN;...;CA (k€);...;Statut;Notes)"></textarea>
         <button class="btn btn-primary" style="margin-top:8px" onclick="importCsv()">Importer dans la qualification</button>
       </div>
       <p class="sub" id="qualiCount"></p>
@@ -558,22 +558,46 @@ function gotoQuali(){
 function importCsv(){
   var txt = (document.getElementById("importTxt").value || "").trim();
   if (!txt) return;
-  var added = 0;
-  txt.split(/\r?\n/).forEach(function(line){
-    if (!line || line.indexOf(";") < 0) return;
+  var lines = txt.split(/\r?\n/).filter(function(l){ return l && l.indexOf(";") >= 0; });
+  if (!lines.length) return;
+  var head = lines[0].split(";").map(function(x){ return x.replace(/^"|"$/g, "").toLowerCase(); });
+  // Détecte un CSV de qualification (format exportQualiCsv) plutôt qu'un export étape 1
+  var isQuali = head.some(function(h){ return h.indexOf("ca (k") === 0 || h === "statut" || h.indexOf("résultat") === 0; });
+  var added = 0, qualifies = 0;
+  lines.slice(1).forEach(function(line){
     var c = line.split(";").map(function(x){ return x.replace(/^"|"$/g, ""); });
     var siren = (c[0] || "").replace(/\s/g, "");
     if (!/^\d{9}$/.test(siren)) return;
-    if (/siren/i.test(c[0]) && /siret/i.test(c[1] || "")) return; // ligne d'en-tête
-    if (qList.some(function(q){ return q.siren === siren; })) return;
-    qList.push({ siren: siren, siret: (c[1] || "").replace(/"/g, ""), denom: c[2] || "",
-                 enseigne: c[3] || "", commune: c[8] || "", cp: (c[7] || "").replace(/"/g, ""),
-                 naf: c[4] || "", tranche: "" });
-    added++;
+    if (!qList.some(function(q){ return q.siren === siren; })){
+      qList.push({ siren: siren, siret: (c[1] || "").replace(/\s/g, ""), denom: c[2] || "",
+                   enseigne: isQuali ? "" : (c[3] || ""),
+                   commune: isQuali ? (c[4] || "") : (c[8] || ""),
+                   cp: (isQuali ? (c[5] || "") : (c[7] || "")).replace(/\s/g, ""),
+                   naf: isQuali ? "" : (c[4] || ""), tranche: "" });
+      added++;
+    }
+    if (isQuali){
+      var d = qDefault(siren);
+      if (c[7]) d.ca = c[7];
+      if (c[8]) d.res = c[8];
+      var exMap = { "structuré": "s", "structure": "s", "partiel": "partiel", "inconnu": "inconnu", "non": "ns" };
+      if (c[9]) d.export = exMap[(c[9] || "").toLowerCase()] || "inconnu";
+      function yn(x){ return /^oui$/i.test(x || ""); }
+      if (c[10] !== undefined && c[10] !== "") d.levee = yn(c[10]);
+      if (c[11] !== undefined && c[11] !== "") d.croissance = yn(c[11]);
+      if (c[12] !== undefined && c[12] !== "") d.impact = yn(c[12]);
+      if (c[13] !== undefined && c[13] !== "") d.exportable = yn(c[13]);
+      if (c[14] !== undefined && c[14] !== "") d.dirigeant = yn(c[14]);
+      if (c[15] !== undefined && c[15] !== "") d.proximite = yn(c[15]);
+      if (c[16] !== undefined && c[16] !== "") d.procColl = yn(c[16]);
+      if (c[17] !== undefined && c[17] !== "") d.oppProsp = yn(c[17]);
+      if (c[20]) d.notes = c[20];
+      qualifies++;
+    }
   });
   qSave();
   renderQuali();
-  alert(added + " entreprise(s) importée(s).");
+  alert(added + " entreprise(s) ajoutée(s), " + qualifies + " qualification(s) appliquée(s).");
 }
 
 function setGrille(g){
