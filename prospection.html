@@ -827,7 +827,7 @@ function renderQEdit(siren){
     + '<div style="margin-top:12px"><details><summary style="cursor:pointer;font-size:.85rem;color:#64748b">Détail du score (grille ' + (qGrille === "impact" ? "impact positif" : "standard") + ')</summary><ul class="sub" style="margin:6px 0">' + det + '</ul></details></div>'
     + '<div style="margin-top:10px"><button class="btn btn-ghost" onclick="removeFromQuali(\'' + siren + '\')">Retirer de la liste</button></div>'
     + '</div>';
-  window.scrollTo({ top: document.getElementById("qedit").offsetTop - 90, behavior: "smooth" });
+  // défilement auto supprimé : la fiche s'affiche en bas sans scroller
 }
 
 function qset(siren, field, value){
