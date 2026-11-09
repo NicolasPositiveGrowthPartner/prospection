@@ -159,6 +159,7 @@
           <button class="btn btn-ghost" onclick="toggleHelp()">Barème</button>
           <button class="btn btn-ghost" onclick="toggleImport()">Importer un CSV</button>
           <button class="btn btn-dark" onclick="exportQualiCsv()">Export qualification</button>
+          <button class="btn btn-ghost" style="color:#b91c1c;border-color:#fecaca" onclick="resetQuali()">Reset</button>
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:12px">
@@ -170,22 +171,30 @@
         <p><strong>Grille « Standard » (100 pts)</strong> - produit exportable 20 / CA &ge; 500 k&euro; 10 / résultat net positif 10 / croissance ou recrutement 15 / besoin export (non structuré 20, partiel 15, inconnu 10, structuré 0) / dirigeant identifiable 15 / proximité géo AURA 10.</p>
         <p style="margin-bottom:0"><strong>Éliminatoires :</strong> procédure collective, opposition à la prospection. <strong>Statuts :</strong> &ge; 70 Prioritaire / 40-69 À qualifier / &lt; 40 Veille.</p>
       </div>
-      <div id="importBlock" style="display:none;margin-top:10px">
-        <textarea id="importTxt" rows="4" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:.85rem;box-sizing:border-box" placeholder="Colle ici le CSV exporté de l'étape 1 (SIREN;SIRET;Dénomination;...) OU un CSV de qualification (SIREN;...;CA (k€);...;Statut;Notes)"></textarea>
-        <button class="btn btn-primary" style="margin-top:8px" onclick="importCsv()">Importer dans la qualification</button>
-      </div>
       <p class="sub" id="qualiCount"></p>
     </div>
     <div class="card">
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>SIREN / SIRET</th><th>Dénomination / Enseigne</th><th>Localisation</th><th>Score</th><th>Statut</th><th>Liens</th></tr></thead>
+          <thead><tr><th>SIREN / SIRET</th><th>Dénomination / Enseigne</th><th>Localisation</th><th>PGP</th><th>Standard</th><th>Statut</th><th>Point clé</th></tr></thead>
           <tbody id="qtbody"></tbody>
         </table>
       </div>
     </div>
     <div id="qedit"></div>
     <p class="qinfo" style="margin-top:10px">Les saisies de qualification sont enregistrées dans ton navigateur (stockage local) : elles restent disponibles d'une session à l'autre sur ce même appareil.</p>
+  </div>
+</div>
+
+<div id="importModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:50" onclick="if(event.target===this)toggleImport()">
+  <div style="background:#fff;max-width:680px;margin:7vh auto;padding:18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25)">
+    <h2 style="margin:0 0 6px">Importer un CSV</h2>
+    <p class="sub" style="margin-top:0">Colle ici le CSV de qualification fourni (SIREN;...;CA (k€);...;Statut;Notes) ou un export CSV de l'étape 1.</p>
+    <textarea id="importTxt" rows="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:.8rem;font-family:ui-monospace,monospace;box-sizing:border-box" placeholder="Colle le CSV ici..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" style="flex:1;margin-top:0" onclick="importCsv()">Importer</button>
+      <button class="btn btn-ghost" style="margin-top:0" onclick="toggleImport()">Annuler</button>
+    </div>
   </div>
 </div>
 
@@ -598,6 +607,7 @@ function importCsv(){
   qSave();
   renderQuali();
   alert(added + " entreprise(s) ajoutée(s), " + qualifies + " qualification(s) appliquée(s).");
+  toggleImport();
 }
 
 function setGrille(g){
@@ -608,7 +618,7 @@ function setGrille(g){
 }
 
 function toggleHelp(){ var el = document.getElementById("qualiHelp"); el.style.display = el.style.display === "none" ? "block" : "none"; }
-function toggleImport(){ var el = document.getElementById("importBlock"); el.style.display = el.style.display === "none" ? "block" : "none"; }
+function toggleImport(){ var el = document.getElementById("importModal"); el.style.display = el.style.display === "none" ? "block" : "none"; }
 
 function qDefault(siren){
   if (!quali[siren]) quali[siren] = {};
@@ -671,6 +681,29 @@ function badgeCls(status){
   if (status === "Exclu") return "b-x";
   return "b-c";
 }
+function esc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function pointCle(ident, d){
+  var ex = { s: "structuré", partiel: "partiel", inconnu: "inconnu", ns: "non" }[d.export || "inconnu"] || "inconnu";
+  var parts = [];
+  parts.push(d.ca ? "CA " + Number(d.ca).toLocaleString("fr-FR") + " k€" : "CA non renseigné");
+  if (d.res !== undefined && d.res !== "") parts.push("RN " + Number(d.res).toLocaleString("fr-FR") + " k€");
+  parts.push("export : " + ex);
+  if (d.levee) parts.push("levée récente/en cours");
+  if (d.impact) parts.push("impact positif validé");
+  if (d.procColl) parts.push("⚠ PROCÉDURE COLLECTIVE");
+  if (d.oppProsp) parts.push("⚠ opposition prospection");
+  var li = '<a class="qlink" target="_blank" href="https://www.linkedin.com/search/results/companies/?keywords=' + encodeURIComponent(ident.denom || ident.siren) + '">LinkedIn</a>';
+  var s = parts.join(" · ") + ' · ' + li;
+  if (d.notes) s += '<br/><span class="naf-lib">' + esc(d.notes) + '</span>';
+  return s;
+}
+function resetQuali(){
+  if (!confirm("Reset complet : effacer la liste et toutes les qualifications enregistrées dans ce navigateur ?")) return;
+  qList = []; quali = {}; qCurrent = null; qGrille = "impact";
+  try { localStorage.removeItem("pgp_qgrille"); localStorage.removeItem("pgp_quali"); localStorage.removeItem("pgp_qlist"); } catch(e){}
+  document.getElementById("qedit").innerHTML = "";
+  renderQuali();
+}
 
 function qLinks(ident){
   var denom = (ident.denom || ident.siren).replace(/"/g, "");
@@ -702,14 +735,18 @@ function renderQuali(){
   document.getElementById("qualiCount").textContent =
     "(" + rows.length + " entreprises, " + nPrio + " prioritaires, " + nExcl + " exclues - grille " + (qGrille === "impact" ? "impact positif" : "standard") + ")";
   document.getElementById("qtbody").innerHTML = rows.map(function(r){
-    var i = r.ident, sc = r.sc;
+    var i = r.ident, sc = r.sc, d = quali[i.siren];
+    var savedG = qGrille;
+    qGrille = "impact"; var pgp = computeScore(i.siren);
+    qGrille = "standard"; var std = computeScore(i.siren);
+    qGrille = savedG;
     return '<tr style="cursor:pointer" onclick="renderQEdit(\'' + i.siren + '\')">'
-      + '<td class="mono">' + i.siren + (i.siret ? '<br/>' + i.siret : '') + '</td>'
-      + '<td style="font-weight:600">' + (i.denom || "—") + (i.enseigne ? '<br/><span class="naf-lib">' + i.enseigne + '</span>' : '') + '</td>'
-      + '<td>' + i.cp + ' ' + i.commune + '</td>'
-      + '<td style="font-weight:600">' + sc.score + '</td>'
+      + '<td style="font-weight:600">' + esc(i.denom || "—") + (i.enseigne ? '<br/><span class="naf-lib">' + esc(i.enseigne) + '</span>' : '') + '<br/><span class="mono">' + i.siren + '</span></td>'
+      + '<td>' + esc(i.cp) + ' ' + esc(i.commune) + '</td>'
+      + '<td style="font-weight:700;color:#059669">' + pgp.score + '</td>'
+      + '<td style="font-weight:700;color:#475569">' + std.score + '</td>'
       + '<td><span class="badge ' + badgeCls(sc.status) + '">' + sc.status + '</span></td>'
-      + '<td>' + qLinks(i) + '</td></tr>';
+      + '<td style="font-size:.78rem">' + pointCle(i, d) + '</td></tr>';
   }).join("");
 }
 
