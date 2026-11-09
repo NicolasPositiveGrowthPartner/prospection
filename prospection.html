@@ -158,7 +158,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-ghost" onclick="toggleHelp()">Barème</button>
           <button class="btn btn-ghost" onclick="toggleImport()">Importer un CSV</button>
-          <button class="btn btn-dark" onclick="exportQualiCsv()">Export qualification</button>
+          <button class="btn btn-dark" onclick="exportQualiCsv()">Export HubSpot (CSV)</button>
           <button class="btn btn-ghost" style="color:#b91c1c;border-color:#fecaca" onclick="resetQuali()">Reset</button>
         </div>
       </div>
@@ -557,7 +557,8 @@ function gotoQuali(){
     var s = e.siren;
     if (!qList.some(function(q){ return q.siren === s; })) {
       qList.push({ siren: s, siret: e.siret || "", denom: gDenom(e), enseigne: gEnseigne(e),
-                   commune: gCommune(e), cp: gCp(e), naf: gNaf(e), tranche: e.trancheEffectifsEtablissement || "" });
+                   commune: gCommune(e), cp: gCp(e), naf: gNaf(e), tranche: e.trancheEffectifsEtablissement || "",
+                   creation: (e.dateCreationEtablissement || "").slice(0, 4), website: "" });
     }
   });
   qSave();
@@ -582,25 +583,38 @@ function importCsv(){
                    enseigne: isQuali ? "" : (c[3] || ""),
                    commune: isQuali ? (c[4] || "") : (c[8] || ""),
                    cp: (isQuali ? (c[5] || "") : (c[7] || "")).replace(/\s/g, ""),
-                   naf: isQuali ? "" : (c[4] || ""), tranche: "" });
+                   naf: isQuali ? "" : (c[4] || ""), tranche: "",
+                   creation: isQuali ? "" : (c[9] || "").slice(0, 4), website: "" });
       added++;
     }
     if (isQuali){
       var d = qDefault(siren);
-      if (c[7]) d.ca = c[7];
-      if (c[8]) d.res = c[8];
-      var exMap = { "structuré": "s", "structure": "s", "partiel": "partiel", "inconnu": "inconnu", "non": "ns" };
-      if (c[9]) d.export = exMap[(c[9] || "").toLowerCase()] || "inconnu";
       function yn(x){ return /^oui$/i.test(x || ""); }
-      if (c[10] !== undefined && c[10] !== "") d.levee = yn(c[10]);
-      if (c[11] !== undefined && c[11] !== "") d.croissance = yn(c[11]);
-      if (c[12] !== undefined && c[12] !== "") d.impact = yn(c[12]);
-      if (c[13] !== undefined && c[13] !== "") d.exportable = yn(c[13]);
-      if (c[14] !== undefined && c[14] !== "") d.dirigeant = yn(c[14]);
-      if (c[15] !== undefined && c[15] !== "") d.proximite = yn(c[15]);
-      if (c[16] !== undefined && c[16] !== "") d.procColl = yn(c[16]);
-      if (c[17] !== undefined && c[17] !== "") d.oppProsp = yn(c[17]);
-      if (c[20]) d.notes = c[20];
+      var exMap = { "structuré": "s", "structure": "s", "partiel": "partiel", "inconnu": "inconnu", "non": "ns" };
+      // Colonnes nommées si présentes, sinon positions historiques
+      var col = function(names, fb){ for (var i = 0; i < names.length; i++){ var j = head.indexOf(names[i]); if (j >= 0) return j; } return fb; };
+      var iCa = col(["ca (k€)", "ca"], 7), iRes = col(["résultat net (k€)", "résultat net"], 8),
+          iExp = col(["export structuré", "export"], 9), iLev = col(["levée récente", "levée"], 10),
+          iCro = col(["croissance"], 11), iImp = col(["impact validé", "impact"], 12),
+          iExpb = col(["produit exportable"], 13), iDir = col(["dirigeant"], 14),
+          iProx = col(["proximité aura", "proximité"], 15), iProc = col(["procédure collective"], 16),
+          iOpp = col(["opposition prospection"], 17), iSite = col(["site web", "url du site web", "website"], -1),
+          iAn = col(["année de création", "annee de creation", "création", "date de création"], -1),
+          iNotes = col(["notes"], 20);
+      if (c[iCa]) d.ca = c[iCa];
+      if (c[iRes]) d.res = c[iRes];
+      if (c[iExp]) d.export = exMap[(c[iExp] || "").toLowerCase()] || "inconnu";
+      if (c[iLev] !== undefined && c[iLev] !== "") d.levee = yn(c[iLev]);
+      if (c[iCro] !== undefined && c[iCro] !== "") d.croissance = yn(c[iCro]);
+      if (c[iImp] !== undefined && c[iImp] !== "") d.impact = yn(c[iImp]);
+      if (c[iExpb] !== undefined && c[iExpb] !== "") d.exportable = yn(c[iExpb]);
+      if (c[iDir] !== undefined && c[iDir] !== "") d.dirigeant = yn(c[iDir]);
+      if (c[iProx] !== undefined && c[iProx] !== "") d.proximite = yn(c[iProx]);
+      if (c[iProc] !== undefined && c[iProc] !== "") d.procColl = yn(c[iProc]);
+      if (c[iOpp] !== undefined && c[iOpp] !== "") d.oppProsp = yn(c[iOpp]);
+      if (iSite >= 0 && c[iSite]) d.website = c[iSite].trim();
+      if (iAn >= 0 && c[iAn]) d.creation = (c[iAn] || "").slice(0, 4);
+      if (c[iNotes]) d.notes = c[iNotes];
       qualifies++;
     }
   });
@@ -682,7 +696,7 @@ function badgeCls(status){
   return "b-c";
 }
 function esc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-function pointCle(ident, d){
+function pointCleText(ident, d){
   var ex = { s: "structuré", partiel: "partiel", inconnu: "inconnu", ns: "non" }[d.export || "inconnu"] || "inconnu";
   var parts = [];
   parts.push(d.ca ? "CA " + Number(d.ca).toLocaleString("fr-FR") + " k€" : "CA non renseigné");
@@ -692,10 +706,18 @@ function pointCle(ident, d){
   if (d.impact) parts.push("impact positif validé");
   if (d.procColl) parts.push("⚠ PROCÉDURE COLLECTIVE");
   if (d.oppProsp) parts.push("⚠ opposition prospection");
-  var li = '<a class="qlink" target="_blank" href="https://www.linkedin.com/search/results/companies/?keywords=' + encodeURIComponent(ident.denom || ident.siren) + '">LinkedIn</a>';
-  var s = parts.join(" · ") + ' · ' + li;
-  if (d.notes) s += '<br/><span class="naf-lib">' + esc(d.notes) + '</span>';
-  return s;
+  if (d.creation) parts.push("créée en " + d.creation);
+  if (d.notes) parts.push(d.notes);
+  return parts.join(" · ");
+}
+function pointCle(ident, d){
+  var links = "";
+  if (d.website){
+    var w = /^https?:\/\//.test(d.website) ? d.website : "https://" + d.website;
+    links += '<a class="qlink" target="_blank" href="' + w + '">Site web</a>';
+  }
+  links += '<a class="qlink" target="_blank" href="https://www.linkedin.com/search/results/companies/?keywords=' + encodeURIComponent(ident.denom || ident.siren) + '">LinkedIn</a>';
+  return esc(pointCleText(ident, d)) + ' · ' + links;
 }
 function resetQuali(){
   if (!confirm("Reset complet : effacer la liste et toutes les qualifications enregistrées dans ce navigateur ?")) return;
@@ -825,29 +847,36 @@ function removeFromQuali(siren){
   renderQuali();
 }
 
+var DEP_REGION = {};
+Object.keys(REGIONS).forEach(function(r){ REGIONS[r].forEach(function(d){ DEP_REGION[d] = r; }); });
+function regionOf(cp){
+  var dep = (cp || "").slice(0, 2);
+  if (DEP_REGION[dep]) return DEP_REGION[dep];
+  if (/^9[78]/.test(cp || "")) return "Outre-mer";
+  return "";
+}
+
+// Export au format d'import HubSpot (colonnes identiques au CRM)
 function exportQualiCsv(){
   if (!qList.length) { alert("Aucune entreprise qualifiée à exporter."); return; }
-  var head = ["SIREN","SIRET","Dénomination","Enseigne","Commune","Code postal","Grille","CA (k€)","Résultat net (k€)",
-              "Export structuré","Levée récente","Croissance","Impact validé","Produit exportable","Dirigeant",
-              "Proximité AURA","Procédure collective","Opposition prospection","Score","Statut","Notes"];
+  var head = ["ID de fiche d'informations","Nom de l'entreprise","URL du site web","Date de création","Numéro de téléphone",
+              "Ville","Pays/Région","Secteur d'activité","Contexte rapide","Date de la dernière activité",
+              "Page d'entreprise LinkedIn","Statut du lead"];
   var rows = qList.map(function(ident){
     qDefault(ident.siren);
     var d = quali[ident.siren];
-    var sc = computeScore(ident.siren);
-    function b(x){ return x ? "Oui" : "Non"; }
-    function s(x){ return { inconnu: "Inconnu", s: "Structuré", partiel: "Partiel", ns: "Non" }[x] || x; }
-    return [ident.siren, ident.siret, ident.denom, ident.enseigne, ident.commune, ident.cp,
-            qGrille === "impact" ? "Impact" : "Standard", d.ca || "", d.res || "",
-            s(d.export), b(d.levee), b(d.croissance), b(d.impact), b(d.exportable), b(d.dirigeant),
-            b(d.proximite), b(d.procColl), b(d.oppProsp), sc.score, sc.status, (d.notes || "").replace(/"/g, "'")];
+    var li = "https://www.linkedin.com/search/results/companies/?keywords=" + encodeURIComponent(ident.denom || ident.siren);
+    var site = d.website ? (/^https?:\/\//.test(d.website) ? d.website : "https://" + d.website) : "";
+    return ["", ident.denom || "", site, (d.creation || ident.creation || ""), "",
+            ident.commune || "", regionOf(ident.cp), (ident.naf || ""), pointCleText(ident, d), "", li, "Nouveau"];
   });
   var csv = [head].concat(rows).map(function(r){
-    return r.map(function(c){ return '"' + String(c === undefined ? "" : c) + '"'; }).join(";");
+    return r.map(function(c){ return '"' + String(c === undefined ? "" : c).replace(/"/g, "'") + '"'; }).join(";");
   }).join("\n");
-  var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
   var a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "qualification_pgp.csv";
+  a.download = "qualification_hubspot.csv";
   a.click();
   URL.revokeObjectURL(a.href);
 }
