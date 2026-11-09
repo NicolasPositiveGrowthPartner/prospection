@@ -23,10 +23,21 @@ puis les qualifier selon deux grilles de critères (PGP « impact positif » et 
 
 ## Utilisation
 
-- Ouvrir `prospection.html` → onglet « 1. Recherche » → définir les critères → « Rechercher » → « Export CSV ».
-- Ouvrir `analyse.html` → glisser le CSV exporté → scores PGP et Standard automatiques
-  (proximité AURA, budget présumé) + saisie manuelle des autres critères par entreprise.
+- Ouvrir `prospection.html` → onglet « **1. Recherche** » → définir les critères
+  (dénomination, NAF, **régions** et départements, codes postaux, commune, dates, effectifs,
+  catégorie juridique, ESS, actifs/sièges) → « Rechercher » → « Export CSV ».
+- Onglet « **2. Qualification** » : cliquer « Qualifier ces résultats » pour charger la recherche
+  courante, choisir la grille (PGP impact positif / Standard), puis cliquer sur une entreprise pour
+  renseigner CA, résultat net, export, dirigeant, levée, croissance, impact, exclusions.
+  Liens rapides par entreprise : Pappers, Annuaire-entreprises (dirigeants et procédures, gratuit),
+  recherches Google « export » / « levée de fonds », LinkedIn.
+- `analyse.html` sert uniquement à **réanalyser un CSV hors ligne** (glisser-déposer) :
+  scores automatiques des deux grilles + mêmes saisies manuelles.
 - Les saisies de qualification sont stockées dans le navigateur (localStorage).
+
+> Les données SIRENE couvrent identité, adresse, NAF, effectifs, forme juridique.
+> Le CA, le résultat net et les levées de fonds ne figurent PAS dans SIRENE :
+> ils se lisent sur Pappers / presse spécialisée (liens fournis par entreprise).
 
 ## Limites de l'API Sirene
 
