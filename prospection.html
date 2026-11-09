@@ -770,7 +770,7 @@ function renderQuali(){
     qGrille = "standard"; var std = computeScore(i.siren);
     qGrille = savedG;
     return '<tr style="cursor:pointer" onclick="renderQEdit(\'' + i.siren + '\')">'
-      + '<td><input type="checkbox"' + (selQ[i.siren] ? " checked" : "") + ' onchange="event.stopPropagation();toggleSel(\'' + i.siren + '\',this.checked)"></td>'
+      + '<td><input type="checkbox"' + (selQ[i.siren] ? " checked" : "") + ' onclick="event.stopPropagation()" onchange="event.stopPropagation();toggleSel(\'' + i.siren + '\',this.checked)"></td>'
       + '<td style="font-weight:600">' + esc(i.denom || "—") + (i.enseigne ? '<br/><span class="naf-lib">' + esc(i.enseigne) + '</span>' : '') + '<br/><span class="mono">' + i.siren + '</span></td>'
       + '<td>' + esc(i.cp) + ' ' + esc(i.commune) + '</td>'
       + '<td style="font-weight:700;color:#059669">' + pgp.score + '</td>'
