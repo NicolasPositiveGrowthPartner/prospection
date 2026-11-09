@@ -176,7 +176,7 @@
     <div class="card">
       <div style="overflow-x:auto">
         <table>
-          <thead><tr><th>Entreprise (SIREN/SIRET)</th><th>Commune</th><th>PGP</th><th>Standard</th><th>Statut</th><th>Point clé</th></tr></thead>
+          <thead><tr><th style="width:34px"><input type="checkbox" id="selAll" onchange="toggleSelAll(this.checked)" title="Tout sélectionner"></th><th>Entreprise (SIREN/SIRET)</th><th>Commune</th><th>PGP</th><th>Standard</th><th>Statut</th><th>Point clé</th></tr></thead>
           <tbody id="qtbody"></tbody>
         </table>
       </div>
@@ -544,6 +544,13 @@ function qSave(){
   } catch(e){}
 }
 
+var selQ = {};
+try { selQ = JSON.parse(localStorage.getItem("pgp_sel") || "{}"); } catch(e){ selQ = {}; }
+function selSave(){ try { localStorage.setItem("pgp_sel", JSON.stringify(selQ)); } catch(e){} }
+function toggleSel(siren, checked){ selQ[siren] = checked; selSave(); syncSelAll(); }
+function toggleSelAll(checked){ qList.forEach(function(q){ selQ[q.siren] = checked; }); selSave(); renderQuali(); }
+function syncSelAll(){ var el = document.getElementById("selAll"); if (el) el.checked = qList.length > 0 && qList.every(function(q){ return !!selQ[q.siren]; }); }
+
 function switchTab(n){
   document.getElementById("pane1").style.display = n === 1 ? "block" : "none";
   document.getElementById("pane2").style.display = n === 2 ? "block" : "none";
@@ -722,7 +729,7 @@ function pointCle(ident, d){
 function resetQuali(){
   if (!confirm("Reset complet : effacer la liste et toutes les qualifications enregistrées dans ce navigateur ?")) return;
   qList = []; quali = {}; qCurrent = null; qGrille = "impact";
-  try { localStorage.removeItem("pgp_qgrille"); localStorage.removeItem("pgp_quali"); localStorage.removeItem("pgp_qlist"); } catch(e){}
+  selQ = {}; try { localStorage.removeItem("pgp_qgrille"); localStorage.removeItem("pgp_quali"); localStorage.removeItem("pgp_qlist"); localStorage.removeItem("pgp_sel"); } catch(e){}
   document.getElementById("qedit").innerHTML = "";
   renderQuali();
 }
@@ -741,7 +748,7 @@ function renderQuali(){
   document.getElementById("gImpact").className = "btn" + (qGrille === "impact" ? " btn-primary" : "");
   document.getElementById("gStandard").className = "btn" + (qGrille === "standard" ? " btn-primary" : "");
   if (!qList.length){
-    document.getElementById("qtbody").innerHTML = '<tr><td colspan="6" class="empty">Aucune entreprise à qualifier. Lance une recherche à l\'étape 1 puis clique « Qualifier ces résultats », ou importe un CSV.</td></tr>';
+    document.getElementById("qtbody").innerHTML = '<tr><td colspan="7" class="empty">Aucune entreprise à qualifier. Lance une recherche à l\'étape 1 puis clique « Qualifier ces résultats », ou importe un CSV.</td></tr>';
     document.getElementById("qualiCount").textContent = "";
     document.getElementById("qedit").innerHTML = "";
     return;
@@ -763,6 +770,7 @@ function renderQuali(){
     qGrille = "standard"; var std = computeScore(i.siren);
     qGrille = savedG;
     return '<tr style="cursor:pointer" onclick="renderQEdit(\'' + i.siren + '\')">'
+      + '<td><input type="checkbox"' + (selQ[i.siren] ? " checked" : "") + ' onchange="event.stopPropagation();toggleSel(\'' + i.siren + '\',this.checked)"></td>'
       + '<td style="font-weight:600">' + esc(i.denom || "—") + (i.enseigne ? '<br/><span class="naf-lib">' + esc(i.enseigne) + '</span>' : '') + '<br/><span class="mono">' + i.siren + '</span></td>'
       + '<td>' + esc(i.cp) + ' ' + esc(i.commune) + '</td>'
       + '<td style="font-weight:700;color:#059669">' + pgp.score + '</td>'
@@ -861,14 +869,18 @@ function exportQualiCsv(){
   if (!qList.length) { alert("Aucune entreprise qualifiée à exporter."); return; }
   var head = ["ID de fiche d'informations","Nom de l'entreprise","URL du site web","Date de création","Numéro de téléphone",
               "Ville","Pays/Région","Secteur d'activité","Contexte rapide","Date de la dernière activité",
-              "Page d'entreprise LinkedIn","Statut du lead"];
-  var rows = qList.map(function(ident){
+              "Page d'entreprise LinkedIn","Statut du lead","Année de création"];
+  var anySel = qList.some(function(q){ return selQ[q.siren]; });
+  var list = anySel ? qList.filter(function(q){ return selQ[q.siren]; }) : qList;
+  if (!list.length) { alert("Aucune entreprise cochée à exporter."); return; }
+  var rows = list.map(function(ident){
     qDefault(ident.siren);
     var d = quali[ident.siren];
     var li = "https://www.linkedin.com/search/results/companies/?keywords=" + encodeURIComponent(ident.denom || ident.siren);
     var site = d.website ? (/^https?:\/\//.test(d.website) ? d.website : "https://" + d.website) : "";
     return ["", ident.denom || "", site, (d.creation || ident.creation || ""), "",
-            ident.commune || "", regionOf(ident.cp), (ident.naf || ""), pointCleText(ident, d), "", li, "Nouveau"];
+            ident.commune || "", regionOf(ident.cp), (ident.naf || ""), pointCleText(ident, d), "", li, "Nouveau",
+            (d.creation || ident.creation || "")];
   });
   var csv = [head].concat(rows).map(function(r){
     return r.map(function(c){ return '"' + String(c === undefined ? "" : c).replace(/"/g, "'") + '"'; }).join(";");
