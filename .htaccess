@@ -1,0 +1,3 @@
+# Remplace CHANGE_ME par ta clé d'intégration INSEE (portail-api.insee.fr)
+# Ne partage jamais ce fichier rempli et ne le publie pas.
+SetEnv INSEE_API_KEY CHANGE_ME
