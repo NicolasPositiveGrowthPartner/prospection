@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Analyse double grille PGP / Standard - Positive Growth Partner</title>
+<style>
+  :root { font-family: system-ui, -apple-system, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f8fafc; color: #0f172a; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 1.5rem; margin: 0; }
+  .sub { color: #64748b; font-size: .875rem; margin-top: 4px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.05); margin-top: 18px; }
+  .card-pad { padding: 16px; }
+  h2 { font-size: .95rem; margin: 0 0 12px; }
+  #drop { border: 2px dashed #10b981; border-radius: 12px; padding: 28px 16px; text-align: center; background: #ecfdf5; color: #065f46; font-size: .95rem; cursor: pointer; margin-top: 16px; }
+  #drop.over { background: #d1fae5; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 18px; }
+  .kpi { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; }
+  .kpi .v { font-size: 1.4rem; font-weight: 700; }
+  .kpi .l { font-size: .72rem; text-transform: uppercase; color: #64748b; letter-spacing: .04em; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+  .b-a { background: #d1fae5; color: #065f46; } .b-b { background: #fef3c7; color: #92400e; }
+  .b-c { background: #e2e8f0; color: #475569; } .b-x { background: #fee2e2; color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th { text-align: left; font-size: .7rem; text-transform: uppercase; color: #64748b; background: #f8fafc; padding: 8px 10px; cursor: pointer; user-select: none; white-space: nowrap; }
+  td { padding: 8px 10px; border-top: 1px solid #f1f5f9; vertical-align: top; }
+  tr:hover td { background: #ecfdf566; }
+  .mono { font-family: ui-monospace, monospace; font-size: .72rem; color: #64748b; }
+  .btn { display: inline-block; padding: 9px 16px; border-radius: 8px; border: none; font-size: .85rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .btn-primary { background: #059669; color: #fff; }
+  .btn-ghost { background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+  .btn-dark { background: #1e293b; color: #fff; padding: 6px 12px; font-size: .75rem; }
+  .head-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px; }
+  .empty { text-align: center; color: #94a3b8; padding: 40px 16px; }
+  .qedit { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-top: 14px; background: #f8fafc; }
+  .qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .small-input { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: .88rem; box-sizing: border-box; }
+  label { display: block; font-size: .75rem; font-weight: 600; color: #475569; margin: 10px 0 4px; }
+  .checks label { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: #334155; font-weight: 400; margin: 4px 0; }
+  .legend { font-size: .75rem; color: #64748b; margin: 6px 0 0; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 4px 0 12px; vertical-align: -1px; }
+  svg text { font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Analyse double grille</h1>
+    <p class="sub">Importe le CSV exporté de l'étape 1 (Recherche) : chaque entreprise est notée automatiquement sur les deux grilles <strong>PGP (impact positif)</strong> et <strong>Standard</strong>. Les critères non disponibles dans SIRENE (CA, résultat, export, dirigeant...) se renseignent en cliquant sur une ligne.</p>
+  </div>
+
+  <div id="drop" onclick="document.getElementById('file').click()">
+    Glisse ici ton fichier <code>prospection_sirene.csv</code> (ou clique pour choisir un fichier CSV)
+    <input type="file" id="file" accept=".csv,.txt" style="display:none" />
+  </div>
+
+  <div id="content" style="display:none">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card card-pad">
+      <div class="head-row" style="border:none;padding:0 0 8px">
+        <h2 style="margin:0">Score par entreprise — les deux grilles</h2>
+        <div>
+          <button class="btn btn-dark" onclick="exportAnalyse()">Export CSV analyse</button>
+          <button class="btn btn-ghost" onclick="resetSaisies()">Réinitialiser les saisies</button>
+        </div>
+      </div>
+      <p class="legend"><span class="sw" style="background:#059669"></span>Grille PGP (impact) <span class="sw" style="background:#475569"></span>Grille Standard — seuils : 70 = Prioritaire, 40 = À qualifier</p>
+      <div id="chartScores"></div>
+    </div>
+
+    <div class="card card-pad">
+      <h2>Répartition par statut</h2>
+      <div id="chartStatuts"></div>
+    </div>
+
+    <div class="card card-pad">
+      <h2>Géographie (département du code postal)</h2>
+      <p class="legend"><span class="sw" style="background:#059669"></span>Département AURA <span class="sw" style="background:#cbd5e1"></span>Hors AURA</p>
+      <div id="chartGeo"></div>
+    </div>
+
+    <div class="card">
+      <div class="head-row">
+        <h2 style="margin:0">Détail des entreprises <span class="sub" id="count"></span></h2>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th onclick="sortBy('denom')">Dénomination</th><th onclick="sortBy('cp')">CP</th><th onclick="sortBy('commune')">Commune</th>
+            <th onclick="sortBy('effectif')">Effectif</th><th onclick="sortBy('naf')">NAF</th>
+            <th onclick="sortBy('pgp')">PGP</th><th onclick="sortBy('std')">Standard</th><th></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="qedit"></div>
+    <p class="sub" style="margin-top:10px">Les saisies manuelles sont enregistrées dans ton navigateur (stockage local), par SIREN.</p>
+  </div>
+</div>
+
+<script>
+var TRANCHES = [
+  ["NN","0 salarié"],["01","1 à 2"],["02","3 à 5"],["03","6 à 9"],["11","10 à 19"],["12","20 à 49"],
+  ["21","50 à 99"],["22","100 à 199"],["31","200 à 249"],["32","250 à 499"],["41","500 à 999"],
+  ["42","1 000 à 1 999"],["51","2 000 à 4 999"],["52","5 000 et plus"]
+];
+var DEPT_AURA = ["01","03","07","15","26","38","42","43","63","69","73","74"];
+var TRANCHE_MIN_IDX = { "03":1,"11":1,"12":1,"21":1,"22":1,"31":1,"32":1,"41":1,"42":1,"51":1,"52":1 };
+
+var rows = [];            // entreprises parsées depuis le CSV
+var overrides = {};       // saisies manuelles par SIREN (persistées)
+var sortKey = "pgp", sortDir = -1;
+var qCurrent = null;
+
+try { overrides = JSON.parse(localStorage.getItem("pgp_analyse_v1") || "{}"); } catch(e){ overrides = {}; }
+function save(){ try { localStorage.setItem("pgp_analyse_v1", JSON.stringify(overrides)); } catch(e){} }
+
+// ---------- Parsing CSV ----------
+function parseCsv(text){
+  text = text.replace(/^﻿/, "");
+  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim() !== ""; });
+  if (!lines.length) return [];
+  var delim = lines[0].indexOf(";") >= 0 ? ";" : ",";
+  function parseLine(line){
+    var out = [], cur = "", inQ = false;
+    for (var i=0;i<line.length;i++){
+      var ch = line[i];
+      if (inQ){
+        if (ch === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+        else cur += ch;
+      } else {
+        if (ch === '"') inQ = true;
+        else if (ch === delim) { out.push(cur); cur = ""; }
+        else cur += ch;
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+  var head = parseLine(lines[0]).map(function(h){ return h.trim().toLowerCase(); });
+  var idx = function(names){ for (var i=0;i<names.length;i++){ var j = head.indexOf(names[i]); if (j>=0) return j; } return -1; };
+  var cSiren = idx(["siren"]), cSiret = idx(["siret"]), cDenom = idx(["dénomination","denomination"]),
+      cEns = idx(["enseigne"]), cNaf = idx(["naf"]), cNafLib = idx(["libellé naf","libelle naf"]),
+      cSec = idx(["secteur"]), cCp = idx(["code postal"]), cCom = idx(["commune"]),
+      cCrea = idx(["création","creation"]), cEff = idx(["effectif"]), cEmp = idx(["employeur"]), cCJ = idx(["cat. juridique"]);
+  return lines.slice(1).map(function(line){
+    var c = parseLine(line);
+    return {
+      siren: (c[cSiren]||"").replace(/\s/g,""),
+      siret: c[cSiret]||"", denom: c[cDenom]||"", enseigne: c[cEns]||"",
+      naf: c[cNaf]||"", nafLib: c[cNafLib]||"", secteur: c[cSec]||"",
+      cp: (c[cCp]||"").replace(/\s/g,""), commune: c[cCom]||"", creation: c[cCrea]||"",
+      effectif: c[cEff]||"", employeur: c[cEmp]||"", catjur: c[cCJ]||""
+    };
+  }).filter(function(r){ return /^\d{9}$/.test(r.siren); });
+}
+
+function trancheCode(eff){
+  for (var i=0;i<TRANCHES.length;i++) if (eff.indexOf(TRANCHES[i][1]) === 0) return TRANCHES[i][0];
+  return "";
+}
+
+// ---------- Scoring (identique aux grilles de prospection.html) ----------
+function qDefault(r){
+  var d = overrides[r.siren] || (overrides[r.siren] = {});
+  if (d.export === undefined) d.export = "inconnu";
+  if (d.dirigeant === undefined) d.dirigeant = false;
+  if (d.levee === undefined) d.levee = false;
+  if (d.croissance === undefined) d.croissance = false;
+  if (d.impact === undefined) d.impact = false;
+  if (d.exportable === undefined) d.exportable = false;
+  if (d.procColl === undefined) d.procColl = false;
+  if (d.oppProsp === undefined) d.oppProsp = false;
+  if (d.proximite === undefined) d.proximite = DEPT_AURA.indexOf((r.cp||"").slice(0,2)) >= 0;
+  return d;
+}
+
+function scoreGrid(r, d, grille){
+  if (d.procColl || d.oppProsp) return { score: 0, status: "Exclu" };
+  var pgp = grille === "pgp";
+  var pts = 0;
+  if (pgp) pts += d.impact ? 15 : 0;
+  else pts += d.exportable ? 20 : 0;
+  var ca = parseFloat(d.ca) || 0, res = parseFloat(d.res) || 0;
+  if (ca >= 500) pts += 10;
+  if (res > 0) pts += 10;
+  if (pgp) pts += d.levee ? 15 : 0;
+  else pts += d.croissance ? 15 : 0;
+  var ex = d.export || "inconnu";
+  pts += ex === "ns" ? 20 : (ex === "partiel" ? 15 : (ex === "inconnu" ? 10 : 0));
+  pts += d.dirigeant ? (pgp ? 10 : 15) : 0;
+  if (d.proximite) pts += 10;
+  if (pgp){
+    var budget = TRANCHE_MIN_IDX[trancheCode(r.effectif)] || ca >= 1000;
+    if (budget) pts += 10;
+  }
+  var status = pts >= 70 ? "Prioritaire" : (pts >= 40 ? "À qualifier" : "Veille");
+  return { score: pts, status: status };
+}
+
+function bothScores(r){
+  var d = qDefault(r);
+  return { pgp: scoreGrid(r, d, "pgp"), std: scoreGrid(r, d, "standard"), d: d };
+}
+
+function badgeCls(status){
+  if (status === "Prioritaire") return "b-a";
+  if (status === "À qualifier") return "b-b";
+  if (status === "Exclu") return "b-x";
+  return "b-c";
+}
+
+// ---------- Rendu ----------
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function sortedRows(){
+  var arr = rows.slice();
+  arr.sort(function(a,b){
+    var sa = bothScores(a), sb = bothScores(b);
+    var va, vb;
+    if (sortKey === "pgp"){ va = sa.pgp.score; vb = sb.pgp.score; }
+    else if (sortKey === "std"){ va = sa.std.score; vb = sb.std.score; }
+    else { va = a[sortKey] || ""; vb = b[sortKey] || ""; }
+    if (va < vb) return -sortDir; if (va > vb) return sortDir;
+    return 0;
+  });
+  return arr;
+}
+
+function sortBy(k){ if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } renderAll(); }
+
+function renderAll(){
+  if (!rows.length) return;
+  document.getElementById("content").style.display = "block";
+  renderKpis();
+  renderChartScores();
+  renderChartStatuts();
+  renderChartGeo();
+  renderTable();
+}
+
+function renderKpis(){
+  var sc = rows.map(bothScores);
+  var n = rows.length;
+  var nAura = rows.filter(function(r){ return qDefault(r).proximite; }).length;
+  var nPgp = sc.filter(function(s){ return s.pgp.status === "Prioritaire"; }).length;
+  var nStd = sc.filter(function(s){ return s.std.status === "Prioritaire"; }).length;
+  var moyPgp = Math.round(sc.reduce(function(a,s){ return a + s.pgp.score; },0) / n);
+  var moyStd = Math.round(sc.reduce(function(a,s){ return a + s.std.score; },0) / n);
+  document.getElementById("kpis").innerHTML = [
+    [n, "entreprises"],
+    [nAura + " (" + Math.round(100*nAura/n) + " %)", "en zone AURA"],
+    [nPgp, "prioritaires PGP"],
+    [nStd, "prioritaires Standard"],
+    [moyPgp + "/100", "score PGP moyen"],
+    [moyStd + "/100", "score Standard moyen"]
+  ].map(function(k){ return '<div class="kpi"><div class="v">'+k[0]+'</div><div class="l">'+k[1]+'</div></div>'; }).join("");
+}
+
+function renderChartScores(){
+  var MAXW = 520, ROW = 40, LH = 150;
+  var arr = sortedRows().slice(0, 60);
+  var W = LH + MAXW + 60, H = arr.length * ROW + 26;
+  var s = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%">';
+  // seuils 40 et 70
+  [40, 70].forEach(function(t){
+    var x = LH + MAXW * t / 100;
+    s += '<line x1="'+x+'" y1="18" x2="'+x+'" y2="'+(H-8)+'" stroke="#e2e8f0" stroke-dasharray="4 3"/>';
+    s += '<text x="'+x+'" y="12" font-size="9" fill="#94a3b8" text-anchor="middle">'+t+'</text>';
+  });
+  arr.forEach(function(r, i){
+    var sc = bothScores(r);
+    var y = 22 + i * ROW;
+    var label = (r.denom || r.siren); if (label.length > 22) label = label.slice(0, 21) + "…";
+    s += '<text x="'+(LH-8)+'" y="'+(y+16)+'" font-size="10" fill="#334155" text-anchor="end">'+esc(label)+'</text>';
+    s += '<rect x="'+LH+'" y="'+(y+2)+'" width="'+(MAXW*sc.pgp.score/100)+'" height="13" rx="3" fill="#059669"/>';
+    s += '<text x="'+(LH+MAXW*sc.pgp.score/100+5)+'" y="'+(y+12)+'" font-size="10" font-weight="700" fill="#065f46">'+sc.pgp.score+'</text>';
+    s += '<rect x="'+LH+'" y="'+(y+19)+'" width="'+(MAXW*sc.std.score/100)+'" height="13" rx="3" fill="#475569"/>';
+    s += '<text x="'+(LH+MAXW*sc.std.score/100+5)+'" y="'+(y+29)+'" font-size="10" font-weight="700" fill="#475569">'+sc.std.score+'</text>';
+  });
+  s += '</svg>';
+  if (rows.length > 60) s += '<p class="legend">Top 60 affichés sur ' + rows.length + '.</p>';
+  document.getElementById("chartScores").innerHTML = s;
+}
+
+function renderChartStatuts(){
+  var statuts = ["Prioritaire", "À qualifier", "Veille", "Exclu"];
+  var cls = { "Prioritaire":"#059669", "À qualifier":"#d97706", "Veille":"#94a3b8", "Exclu":"#dc2626" };
+  var cnt = { pgp: {}, std: {} };
+  rows.forEach(function(r){ var sc = bothScores(r); cnt.pgp[sc.pgp.status] = (cnt.pgp[sc.pgp.status]||0)+1; cnt.std[sc.std.status] = (cnt.std[sc.std.status]||0)+1; });
+  var MAXW = 420, ROW = 30;
+  var W = 170 + MAXW + 40, H = statuts.length * ROW * 2 + 40;
+  var s = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%">';
+  statuts.forEach(function(st, i){
+    [["PGP", cnt.pgp, 20 + i*ROW*2], ["Standard", cnt.std, 20 + i*ROW*2 + ROW]].forEach(function(g){
+      var y = g[2], v = g[1][st] || 0;
+      s += '<text x="80" y="'+(y+14)+'" font-size="10" fill="#475569" text-anchor="end">'+g[0]+'</text>';
+      s += '<rect x="90" y="'+(y+3)+'" width="'+(MAXW*v/rows.length)+'" height="14" rx="3" fill="'+cls[st]+'"/>';
+      s += '<text x="'+(90+MAXW*v/rows.length+5)+'" y="'+(y+14)+'" font-size="10" font-weight="700" fill="#334155">'+st+' : '+v+'</text>';
+    });
+  });
+  s += '</svg>';
+  document.getElementById("chartStatuts").innerHTML = s;
+}
+
+function renderChartGeo(){
+  var byDept = {};
+  rows.forEach(function(r){
+    var dep = (r.cp||"").slice(0,2) || "?";
+    byDept[dep] = (byDept[dep]||0) + 1;
+  });
+  var depts = Object.keys(byDept).sort(function(a,b){ return byDept[b]-byDept[a]; });
+  var MAXW = 420, ROW = 22;
+  var W = 60 + MAXW + 40, H = depts.length * ROW + 10;
+  var s = '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="max-width:100%">';
+  depts.forEach(function(dep, i){
+    var y = 8 + i * ROW, v = byDept[dep], aura = DEPT_AURA.indexOf(dep) >= 0;
+    s += '<text x="50" y="'+(y+14)+'" font-size="10" font-weight="700" fill="'+(aura?"#065f46":"#64748b")+'" text-anchor="end">'+dep+(aura?" ★":"")+'</text>';
+    s += '<rect x="60" y="'+(y+3)+'" width="'+(MAXW*v/rows.length)+'" height="14" rx="3" fill="'+(aura?"#059669":"#cbd5e1")+'"/>';
+    s += '<text x="'+(60+MAXW*v/rows.length+5)+'" y="'+(y+14)+'" font-size="10" fill="#334155">'+v+'</text>';
+  });
+  s += '</svg>';
+  document.getElementById("chartGeo").innerHTML = s;
+}
+
+function renderTable(){
+  var arr = sortedRows();
+  document.getElementById("count").textContent = "(" + arr.length + " entreprises — cliquer sur une ligne pour renseigner les critères manuels)";
+  document.getElementById("tbody").innerHTML = arr.map(function(r){
+    var sc = bothScores(r);
+    return '<tr style="cursor:pointer" onclick="renderEdit(\''+r.siren+'\')">'
+      + '<td style="font-weight:600">' + esc(r.denom || "—") + (r.enseigne ? '<br/><span class="mono">'+esc(r.enseigne)+'</span>' : '') + '<br/><span class="mono">'+r.siren+'</span></td>'
+      + '<td class="mono">' + esc(r.cp) + '</td>'
+      + '<td>' + esc(r.commune) + '</td>'
+      + '<td>' + esc(r.effectif) + '</td>'
+      + '<td class="mono">' + esc(r.naf) + '</td>'
+      + '<td><strong>' + sc.pgp.score + '</strong> <span class="badge ' + badgeCls(sc.pgp.status) + '">' + sc.pgp.status + '</span></td>'
+      + '<td><strong>' + sc.std.score + '</strong> <span class="badge ' + badgeCls(sc.std.status) + '">' + sc.std.status + '</span></td>'
+      + '<td><button class="btn btn-ghost" style="padding:4px 10px;font-size:.75rem" onclick="event.stopPropagation();renderEdit(\''+r.siren+'\')">Qualifier</button></td></tr>';
+  }).join("") || '<tr><td colspan="8" class="empty">Aucune entreprise.</td></tr>';
+}
+
+// ---------- Édition manuelle ----------
+function renderEdit(siren){
+  qCurrent = siren;
+  var r = rows.filter(function(x){ return x.siren === siren; })[0];
+  if (!r) return;
+  var d = qDefault(r);
+  var sc = bothScores(r);
+  document.getElementById("qedit").innerHTML =
+    '<div class="qedit">'
+    + '<h2 style="margin-top:0">' + esc(r.denom || siren) + ' <span class="mono">' + siren + '</span>'
+    + ' &nbsp; <span class="badge ' + badgeCls(sc.pgp.status) + '">PGP ' + sc.pgp.status + ' — ' + sc.pgp.score + '/100</span>'
+    + ' &nbsp; <span class="badge ' + badgeCls(sc.std.status) + '">Standard ' + sc.std.status + ' — ' + sc.std.score + '/100</span></h2>'
+    + '<p class="sub" style="margin:0 0 8px">' + esc(r.cp) + ' ' + esc(r.commune) + ' — ' + esc(r.naf) + ' ' + esc(r.nafLib) + ' — effectif : ' + esc(r.effectif) + ' — créé le ' + esc(r.creation) + '</p>'
+    + '<div class="qgrid">'
+    + '<div><label>Chiffre d\'affaires (k€)</label><input type="number" class="small-input" value="' + (d.ca || "") + '" oninput="aset(\'' + siren + '\',\'ca\',this.value)"/></div>'
+    + '<div><label>Résultat net (k€)</label><input type="number" class="small-input" value="' + (d.res || "") + '" oninput="aset(\'' + siren + '\',\'res\',this.value)"/></div>'
+    + '<div><label>Export structuré ?</label><select class="small-input" onchange="aset(\'' + siren + '\',\'export\',this.value)">'
+    +   '<option value="inconnu"' + (d.export === "inconnu" ? " selected" : "") + '>Inconnu</option>'
+    +   '<option value="s"' + (d.export === "s" ? " selected" : "") + '>Oui, structuré</option>'
+    +   '<option value="partiel"' + (d.export === "partiel" ? " selected" : "") + '>Partiel / opportuniste</option>'
+    +   '<option value="ns"' + (d.export === "ns" ? " selected" : "") + '>Non, pas d\'export</option>'
+    + '</select></div>'
+    + '<div class="checks"><label><input type="checkbox"' + (d.dirigeant ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'dirigeant\',this.checked)"/> Dirigeant identifiable</label>'
+    +   '<label><input type="checkbox"' + (d.proximite ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'proximite\',this.checked)"/> Proximité géo (AURA)</label></div>'
+    + '<div class="checks"><label><input type="checkbox"' + (d.levee ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'levee\',this.checked)"/> Levée récente / en cours (PGP)</label>'
+    +   '<label><input type="checkbox"' + (d.croissance ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'croissance\',this.checked)"/> Croissance / recrutement (Standard)</label></div>'
+    + '<div class="checks"><label><input type="checkbox"' + (d.impact ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'impact\',this.checked)"/> Impact positif validé (PGP)</label>'
+    +   '<label><input type="checkbox"' + (d.exportable ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'exportable\',this.checked)"/> Produit exportable (Standard)</label></div>'
+    + '<div class="checks"><label><input type="checkbox"' + (d.procColl ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'procColl\',this.checked)"/> Procédure collective (exclu)</label>'
+    +   '<label><input type="checkbox"' + (d.oppProsp ? " checked" : "") + ' onchange="aset(\'' + siren + '\',\'oppProsp\',this.checked)"/> Opposition prospection (exclu)</label></div>'
+    + '</div>'
+    + '<div style="margin-top:12px"><label>Notes</label><textarea class="small-input" rows="2" oninput="aset(\'' + siren + '\',\'notes\',this.value)">' + esc(d.notes || "") + '</textarea></div>'
+    + '</div>';
+  window.scrollTo({ top: document.getElementById("qedit").offsetTop - 80, behavior: "smooth" });
+}
+
+function aset(siren, field, value){
+  qDefault(rows.filter(function(x){ return x.siren === siren; })[0]);
+  overrides[siren][field] = value;
+  save();
+  renderAll();
+  renderEdit(siren);
+}
+
+function resetSaisies(){
+  if (!confirm("Effacer toutes les saisies manuelles enregistrées ?")) return;
+  overrides = {}; save(); qCurrent = null;
+  document.getElementById("qedit").innerHTML = "";
+  renderAll();
+}
+
+// ---------- Export ----------
+function exportAnalyse(){
+  var head = ["SIREN","SIRET","Dénomination","Commune","Code postal","NAF","Effectif",
+              "Score PGP","Statut PGP","Score Standard","Statut Standard",
+              "CA (k€)","Résultat net (k€)","Export structuré","Dirigeant","Proximité AURA",
+              "Levée","Croissance","Impact validé","Produit exportable","Proc. collective","Opposition","Notes"];
+  var csv = [head].concat(sortedRows().map(function(r){
+    var sc = bothScores(r), d = sc.d;
+    function b(x){ return x ? "Oui" : "Non"; }
+    function s(x){ return { inconnu:"Inconnu", s:"Structuré", partiel:"Partiel", ns:"Non" }[x] || x; }
+    return [r.siren, r.siret, r.denom, r.commune, r.cp, r.naf, r.effectif,
+            sc.pgp.score, sc.pgp.status, sc.std.score, sc.std.status,
+            d.ca || "", d.res || "", s(d.export), b(d.dirigeant), b(d.proximite),
+            b(d.levee), b(d.croissance), b(d.impact), b(d.exportable), b(d.procColl), b(d.oppProsp),
+            (d.notes || "").replace(/"/g, "'")];
+  })).map(function(row){ return row.map(function(c){ return '"' + String(c == null ? "" : c) + '"'; }).join(";"); }).join("\n");
+  var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "analyse_double_grille.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---------- Chargement fichier ----------
+function loadText(text){
+  rows = parseCsv(text);
+  document.getElementById("qedit").innerHTML = "";
+  qCurrent = null;
+  if (!rows.length){ alert("Aucun SIREN valide trouvé. Utilise le CSV exporté depuis l'étape 1 (prospection_sirene.csv)."); return; }
+  renderAll();
+}
+document.getElementById("file").addEventListener("change", function(e){
+  var f = e.target.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){ loadText(String(rd.result)); };
+  rd.readAsText(f, "UTF-8");
+});
+var drop = document.getElementById("drop");
+["dragover","dragenter"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+drop.addEventListener("drop", function(e){
+  var f = e.dataTransfer.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){ loadText(String(rd.result)); };
+  rd.readAsText(f, "UTF-8");
+});
+// Essai de chargement automatique si le CSV de l'étape 1 est à côté
+fetch("prospection_sirene.csv").then(function(r){ return r.ok ? r.text() : null; }).then(function(t){ if (t) loadText(t); }).catch(function(){});
+</script>
+</body>
+</html>
